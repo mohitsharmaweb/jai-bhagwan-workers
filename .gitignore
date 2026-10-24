@@ -1,0 +1,45 @@
+# ==============================================================================
+# JAI BHAGWAN WORKERS MANAGEMENT - GIT IGNORE
+# ==============================================================================
+
+# 1. Environment & Secrets (NEVER UPLOAD TO GITHUB)
+.env
+.env*.local
+.env.production
+.env.development
+*.env
+
+# (Explicitly keep the example file safe)
+!.env.example
+
+# 2. Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 3. Production Build Artifacts
+dist/
+dist-ssr/
+
+# 4. Mobile / APK Binaries
+*.apk
+*.aab
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# 5. OS & IDE System Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 6. Vite Temporary Files
+vite.config.js.timestamp-*

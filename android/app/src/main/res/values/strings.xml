@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ApnaWorker</string>
+    <string name="title_activity_main">ApnaWorker</string>
+    <string name="package_name">com.apnaworker.app</string>
+    <string name="custom_url_scheme">com.apnaworker.app</string>
+</resources>

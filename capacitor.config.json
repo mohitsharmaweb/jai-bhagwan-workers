@@ -1,0 +1,9 @@
+{
+  "appId": "com.apnaworker.app",
+  "appName": "ApnaWorker",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

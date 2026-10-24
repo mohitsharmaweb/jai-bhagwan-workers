@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if requesting user is an active administrator in the admins collection
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+    }
+
+    // Helper: Validate incoming public registration submission
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['fullName', 'phone', 'category', 'city', 'area', 'consent', 'status', 'createdAt', 'regId'])
+        && data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 80
+        && data.phone is string && data.phone.matches('^[6-9][0-9]{9}$')
+        && data.category is string && data.category.size() >= 2 && data.category.size() <= 50
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 50
+        && data.area is string && data.area.size() >= 2 && data.area.size() <= 80
+        && data.consent == true
+        && data.status == 'pending'
+        && data.regId is string && data.regId.size() >= 6;
+    }
+
+    // 1. Worker Submissions: Public submission flow
+    match /workerSubmissions/{submissionId} {
+      // Anyone can submit a registration as long as it adheres to strict validation and status is 'pending'
+      allow create: if isValidSubmission(request.resource.data);
+
+      // Only authenticated, verified administrators can view submissions, filter them, change status (approve/reject), or delete
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 2. Approved Worker Directory: Private directory
+    match /workers/{workerId} {
+      // Strictly private: Only verified administrators can read, create, update, or archive workers
+      allow read, write: if isAdmin();
+    }
+
+    // 3. Administrator Registry
+    match /admins/{adminId} {
+      // Any authenticated user can check their own admin doc to verify their role
+      allow get: if isAuthenticated() && request.auth.uid == adminId;
+
+      // Only already verified admins can list all admins or update permissions
+      allow list: if isAdmin();
+      allow update, delete: if isAdmin();
+
+      // Nobody can self-register as an admin via client SDK. 
+      // Initial admin UID must be created directly in Firebase Console.
+      allow create: if false;
+    }
+  }
+}
