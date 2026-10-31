@@ -6,10 +6,10 @@ import {
   ShieldCheck, 
   QrCode, 
   LogOut, 
-  LogIn, 
   Menu, 
   X, 
   MessageSquare,
+  Calendar,
   Building2,
   Sparkles,
   Home
@@ -106,6 +106,18 @@ export default function Navbar() {
                 </Link>
 
                 <Link
+                  to="/admin/meeting"
+                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                    isActive('/admin/meeting')
+                      ? 'bg-amber-50 text-amber-800'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4 text-amber-600" />
+                  <span>मीटिंग्स</span>
+                </Link>
+
+                <Link
                   to="/admin/qr"
                   className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1.5 ${
                     isActive('/admin/qr')
@@ -125,15 +137,7 @@ export default function Navbar() {
                   <span>लॉगआउट</span>
                 </button>
               </>
-            ) : (
-              <Link
-                to="/login"
-                className="ml-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-sm transition-all"
-              >
-                <LogIn className="w-4 h-4 text-amber-400" />
-                <span>एडमिन लॉगिन (/admin)</span>
-              </Link>
-            )}
+            ) : null}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -208,6 +212,15 @@ export default function Navbar() {
               </Link>
 
               <Link
+                to="/admin/meeting"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-amber-800 bg-amber-50"
+              >
+                <Calendar className="w-4 h-4 text-amber-600" />
+                <span>मीटिंग्स व आमंत्रण (/admin/meeting)</span>
+              </Link>
+
+              <Link
                 to="/admin/qr"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-100"
@@ -229,18 +242,7 @@ export default function Navbar() {
                 </button>
               </div>
             </>
-          ) : (
-            <div className="pt-2 border-t border-slate-100">
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-xs"
-              >
-                <LogIn className="w-4 h-4 text-amber-400" />
-                <span>एडमिन लॉगिन (/admin)</span>
-              </Link>
-            </div>
-          )}
+          ) : null}
         </div>
       )}
     </header>

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { normalizePhoneNumber } from '../utils/formatters';
 
 // Retrieve credentials from environment
 const getSupabaseConfig = () => {
@@ -27,12 +28,17 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 /**
  * Register a new worker (Public endpoint)
+ * Note: Public/anon users only have INSERT permission (no SELECT),
+ * so we must NOT chain .select() here.
  */
 export const registerWorker = async (workerData) => {
+  const normMobile = normalizePhoneNumber(workerData.mobile);
+  const normWhatsapp = normalizePhoneNumber(workerData.whatsapp || workerData.mobile);
+
   const payload = {
     name: workerData.name.trim(),
-    mobile: workerData.mobile.trim(),
-    whatsapp: (workerData.whatsapp || workerData.mobile).trim(),
+    mobile: normMobile,
+    whatsapp: normWhatsapp,
     profession: workerData.profession,
     profession_other: workerData.profession_other || null,
     experience: parseInt(workerData.experience, 10) || 0,
@@ -49,10 +55,9 @@ export const registerWorker = async (workerData) => {
     .insert([payload]);
 
   if (error) {
-    if (error.code === '23505') {
-      throw new Error('DUPLICATE_MOBILE');
-    }
-    throw new Error(error.message || 'पंजीकरण विफल रहा। कृपया पुनः प्रयास करें।');
+    const err = new Error(error.message || 'पंजीकरण विफल रहा। कृपया पुनः प्रयास करें।');
+    err.code = error.code;
+    throw err;
   }
 
   return payload;
@@ -75,19 +80,48 @@ export const fetchAllWorkers = async () => {
 };
 
 /**
+ * Fetch only consented, active workers (For Meeting / WhatsApp dispatch)
+ * Filters at DB level: consent = true, status = 'active'
+ */
+export const fetchConsentedWorkers = async () => {
+  const { data, error } = await supabase
+    .from('workers')
+    .select('*')
+    .eq('consent', true)
+    .eq('status', 'active')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching consented workers from Supabase:', error);
+    throw error;
+  }
+  return data || [];
+};
+
+/**
  * Update worker details (For Logged-in Admin)
  */
 export const updateWorker = async (id, updates) => {
+  const payload = { ...updates };
+  if (payload.mobile) {
+    payload.mobile = normalizePhoneNumber(payload.mobile);
+  }
+  if (payload.whatsapp) {
+    payload.whatsapp = normalizePhoneNumber(payload.whatsapp);
+  }
+
   const { data, error } = await supabase
     .from('workers')
-    .update(updates)
+    .update(payload)
     .eq('id', id)
     .select()
     .single();
 
   if (error) {
     console.error('Error updating worker in Supabase:', error);
-    throw error;
+    const err = new Error(error.message);
+    err.code = error.code;
+    throw err;
   }
   return data;
 };
@@ -146,4 +180,72 @@ export const logMessageSent = async (logData) => {
     console.warn('Supabase message log insert issue:', error.message);
   }
   return data;
+};
+
+// ==============================================================================
+// MEETINGS OPERATIONS (ADMIN ONLY)
+// ==============================================================================
+
+/**
+ * Create a new meeting (Admin only)
+ */
+export const createMeeting = async (meetingData) => {
+  const payload = {
+    title: meetingData.title.trim(),
+    meeting_date: meetingData.meeting_date,
+    meeting_time: meetingData.meeting_time,
+    location: meetingData.location.trim(),
+    notes: meetingData.notes ? meetingData.notes.trim() : null,
+    target_trade: meetingData.target_trade || 'all',
+    target_area: meetingData.target_area || 'all',
+    created_at: new Date().toISOString()
+  };
+
+  const { data, error } = await supabase
+    .from('meetings')
+    .insert([payload])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating meeting in Supabase:', error);
+    const err = new Error(error.message);
+    err.code = error.code;
+    throw err;
+  }
+  return data;
+};
+
+/**
+ * Fetch all meetings (Admin only)
+ */
+export const fetchMeetings = async () => {
+  const { data, error } = await supabase
+    .from('meetings')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching meetings from Supabase:', error);
+    throw error;
+  }
+  return data || [];
+};
+
+/**
+ * Delete a meeting (Admin only)
+ */
+export const deleteMeeting = async (id) => {
+  const { error } = await supabase
+    .from('meetings')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting meeting from Supabase:', error);
+    const err = new Error(error.message);
+    err.code = error.code;
+    throw err;
+  }
+  return true;
 };

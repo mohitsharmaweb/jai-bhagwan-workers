@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { compileTemplate } from '../constants/templates';
+import { normalizePhoneNumber } from '../utils/formatters';
 
 /**
  * Format 10-digit Indian phone number to WhatsApp international standard
@@ -7,15 +8,8 @@ import { compileTemplate } from '../constants/templates';
  */
 export const formatWhatsAppNumber = (phone) => {
   if (!phone) return '';
-  // Strip all non-digits
-  const cleaned = phone.toString().replace(/\D/g, '');
-  if (cleaned.length === 10) {
-    return `91${cleaned}`;
-  }
-  if (cleaned.length === 12 && cleaned.startsWith('91')) {
-    return cleaned;
-  }
-  return cleaned;
+  const digits = normalizePhoneNumber(phone);
+  return digits ? `91${digits}` : '';
 };
 
 /**

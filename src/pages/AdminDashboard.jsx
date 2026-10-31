@@ -6,6 +6,7 @@ import { JAIPUR_AREAS, getAreaLabel } from '../constants/areas';
 import { 
   Users, 
   MessageSquare, 
+  Calendar,
   QrCode, 
   ShieldCheck, 
   TrendingUp, 
@@ -84,6 +85,14 @@ export default function AdminDashboard() {
             >
               <MessageSquare className="w-4 h-4 text-emerald-600" />
               <span>WhatsApp मैसेज भेजें (/admin/message)</span>
+            </Link>
+
+            <Link
+              to="/admin/meeting"
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md flex items-center gap-2 transition-transform active:scale-95"
+            >
+              <Calendar className="w-4 h-4 text-slate-950" />
+              <span>मीटिंग्स व आमंत्रण (/admin/meeting)</span>
             </Link>
 
             <Link

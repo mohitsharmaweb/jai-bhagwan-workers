@@ -5,6 +5,7 @@ import {
   LayoutDashboard, 
   Users, 
   MessageSquare, 
+  Calendar,
   QrCode, 
   ExternalLink, 
   LogOut, 
@@ -40,6 +41,13 @@ export default function AdminSidebar() {
       icon: MessageSquare,
       badge: 'New',
       badgeColor: 'bg-emerald-500 text-white'
+    },
+    {
+      to: '/admin/meeting',
+      label: 'मीटिंग्स (Meetings)',
+      icon: Calendar,
+      badge: 'New',
+      badgeColor: 'bg-amber-500 text-white'
     },
     {
       to: '/admin/qr',

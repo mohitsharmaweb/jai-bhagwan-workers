@@ -6,6 +6,7 @@ import {
   updateWorker, 
   deleteWorker 
 } from '../lib/supabase';
+import { normalizePhoneNumber } from '../utils/formatters';
 import { PROFESSIONS, getProfessionLabel } from '../constants/professions';
 import { JAIPUR_AREAS, getAreaLabel } from '../constants/areas';
 import { createWhatsAppChatUrl } from '../services/whatsappService';
@@ -164,13 +165,16 @@ export default function AdminWorkers() {
     e.preventDefault();
     setFormError('');
 
-    if (!formData.name.trim() || !formData.mobile.trim()) {
+    const normMobile = normalizePhoneNumber(formData.mobile);
+    const normWhatsapp = normalizePhoneNumber(formData.whatsapp || formData.mobile);
+
+    if (!formData.name.trim() || !normMobile) {
       setFormError('नाम और 10 अंकों का मोबाइल नंबर अनिवार्य है।');
       return;
     }
 
-    if (!/^[6-9]\d{9}$/.test(formData.mobile.trim())) {
-      setFormError('कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें।');
+    if (!/^[6-9]\d{9}$/.test(normMobile)) {
+      setFormError('कृपया सही 10 अंकों का मोबाइल नंबर दर्ज करें (6-9 से शुरू)।');
       return;
     }
 
@@ -181,8 +185,8 @@ export default function AdminWorkers() {
         // Update
         const updated = await updateWorker(editingWorker.id, {
           name: formData.name.trim(),
-          mobile: formData.mobile.trim(),
-          whatsapp: (formData.whatsapp || formData.mobile).trim(),
+          mobile: normMobile,
+          whatsapp: normWhatsapp,
           profession: formData.profession,
           profession_other: formData.profession_other || null,
           experience: parseInt(formData.experience, 10) || 0,
@@ -195,16 +199,20 @@ export default function AdminWorkers() {
         setEditingWorker(null);
       } else {
         // Add new
-        const created = await registerWorker(formData);
+        const created = await registerWorker({
+          ...formData,
+          mobile: normMobile,
+          whatsapp: normWhatsapp
+        });
         setWorkers(prev => [created, ...prev]);
         setIsAddModalOpen(false);
       }
     } catch (err) {
       console.error('Error saving worker:', err);
-      if (err.message === 'DUPLICATE_MOBILE') {
-        setFormError('यह मोबाइल नंबर पहले से किसी अन्य कार्यकर्ता के पास पंजीकृत है।');
+      if (err.code === '23505' || err.message === 'DUPLICATE_MOBILE') {
+        setFormError('यह मोबाइल नंबर पहले से रजिस्टर है।');
       } else {
-        setFormError(err.message || 'सहेजने में त्रुटि हुई।');
+        setFormError('कुछ गड़बड़ हो गई, दोबारा कोशिश करें।');
       }
     } finally {
       setFormSubmitting(false);

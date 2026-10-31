@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerWorker } from '../lib/supabase';
+import { normalizePhoneNumber } from '../utils/formatters';
 import { PROFESSIONS } from '../constants/professions';
 import { JAIPUR_AREAS } from '../constants/areas';
 import { 
@@ -84,15 +85,17 @@ export default function PublicRegister() {
     }
 
     // 2. Mobile validation
-    if (!isValidMobile(formData.mobile)) {
+    const normMobile = normalizePhoneNumber(formData.mobile);
+    if (!isValidMobile(normMobile)) {
       setErrorMsg('कृपया 10 अंकों का सही मोबाइल नंबर दर्ज करें (Valid 10-digit number required)');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     // 3. WhatsApp validation
-    const actualWhatsapp = formData.sameAsMobile ? formData.mobile : formData.whatsapp;
-    if (!isValidMobile(actualWhatsapp)) {
+    const rawWhatsapp = formData.sameAsMobile ? formData.mobile : formData.whatsapp;
+    const normWhatsapp = normalizePhoneNumber(rawWhatsapp);
+    if (!isValidMobile(normWhatsapp)) {
       setErrorMsg('कृपया सही WhatsApp नंबर दर्ज करें (Valid WhatsApp number required)');
       return;
     }
@@ -118,7 +121,8 @@ export default function PublicRegister() {
     try {
       const result = await registerWorker({
         ...formData,
-        whatsapp: actualWhatsapp
+        mobile: normMobile,
+        whatsapp: normWhatsapp
       });
 
       // Navigate to celebration / success page
@@ -129,10 +133,10 @@ export default function PublicRegister() {
       });
     } catch (err) {
       console.error('Registration submission error:', err);
-      if (err.message === 'DUPLICATE_MOBILE') {
-        setErrorMsg('यह मोबाइल नंबर पहले से पंजीकृत है (This mobile number is already registered)');
+      if (err.code === '23505' || err.message === 'DUPLICATE_MOBILE') {
+        setErrorMsg('यह मोबाइल नंबर पहले से रजिस्टर है।');
       } else {
-        setErrorMsg(err.message || 'पंजीकरण पूरा करने में त्रुटि हुई। कृपया पुनः प्रयास करें।');
+        setErrorMsg('कुछ गड़बड़ हो गई, दोबारा कोशिश करें।');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
@@ -432,20 +436,11 @@ export default function PublicRegister() {
           </button>
         </form>
 
-        {/* Footer info & Admin link */}
-        <div className="mt-8 text-center space-y-3">
+        {/* Footer info */}
+        <div className="mt-8 text-center">
           <p className="text-xs text-slate-500">
             सुरक्षित एवं गोपनीय डेटा • केवल जय भगवान प्रबंधन हेतु
           </p>
-          <div className="pt-2">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-amber-700 transition-colors py-1.5 px-3 rounded-lg hover:bg-slate-200/60"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>प्रबंधन लॉगिन (Admin Login)</span>
-            </Link>
-          </div>
         </div>
 
       </div>

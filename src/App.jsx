@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminWorkers from './pages/AdminWorkers';
 import AdminMessaging from './pages/AdminMessaging';
+import AdminMeeting from './pages/AdminMeeting';
 import AdminQR from './pages/AdminQR';
 
 // Icons for Home
@@ -87,33 +88,15 @@ function HomePage() {
           मिस्त्री, इलेक्ट्रीशियन, प्लंबर, कारपेंटर और पेंटर साथियों के लिए आसान स्व-पंजीकरण। त्योहारों की शुभकामनाएं, आवश्यक मीटिंग्स और नए काम के संदेश अब सीधे WhatsApp पर।
         </p>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+        {/* Action Button */}
+        <div className="flex items-center justify-center pt-2">
           <Link
             to="/register"
-            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white rounded-2xl font-black text-base shadow-xl shadow-orange-600/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white rounded-2xl font-black text-base sm:text-lg shadow-xl shadow-orange-600/25 transition-all flex items-center justify-center gap-2.5 hover:scale-[1.02] active:scale-[0.98]"
           >
             <Users className="w-5 h-5" />
-            <span>कारीगर पंजीकरण फॉर्म (/register)</span>
+            <span>कारीगर पंजीकरण फॉर्म भरें (Register Now)</span>
           </Link>
-
-          {isAdmin ? (
-            <Link
-              to="/admin"
-              className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 rounded-2xl font-bold text-base shadow-sm transition-all flex items-center justify-center gap-2 hover:border-slate-300"
-            >
-              <ShieldCheck className="w-5 h-5 text-amber-600" />
-              <span>एडमिन कंट्रोल पैनल (/admin)</span>
-            </Link>
-          ) : (
-            <Link
-              to="/login"
-              className="w-full sm:w-auto px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-base shadow-sm transition-all flex items-center justify-center gap-2"
-            >
-              <Lock className="w-5 h-5 text-amber-400" />
-              <span>प्रबंधन लॉगिन (Admin Login)</span>
-            </Link>
-          )}
         </div>
       </div>
 
@@ -205,6 +188,12 @@ export default function App() {
           <Route path="/admin/message" element={
             <ProtectedRoute>
               <AdminMessaging />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/meeting" element={
+            <ProtectedRoute>
+              <AdminMeeting />
             </ProtectedRoute>
           } />
 
