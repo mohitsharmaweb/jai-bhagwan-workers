@@ -53,7 +53,7 @@ export default function AdminMeeting() {
     title: '',
     meeting_date: defaultDate,
     meeting_time: '10:30',
-    location: 'जय भगवान कार्यालय, मानसरोवर, जयपुर',
+    location: 'जय भगवान कार्यालय, कमला नेहरू नगर, जयपुर',
     notes: '',
     target_trade: 'all',
     target_area: 'all'
@@ -510,7 +510,7 @@ export default function AdminMeeting() {
               <input
                 type="text"
                 required
-                placeholder="उदा. जय भगवान कार्यालय, मानसरोवर, जयपुर"
+                placeholder="उदा. जय भगवान कार्यालय, कमला नेहरू नगर, जयपुर"
                 value={formData.location}
                 onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                 className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all font-medium text-slate-800"

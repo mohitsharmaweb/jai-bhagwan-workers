@@ -108,7 +108,7 @@ export function buildMeetingMessage({ title, date, time, location, notes, worker
     `*${title ? title.trim() : 'मीटिंग सूचना'}*`,
     `📅 तारीख: ${formattedDate || 'तारीख'}`,
     `⏰ समय: ${formattedTime || 'समय'}`,
-    `📍 जगह: ${location ? location.trim() : 'जयपुर कार्यालय'}`
+    `📍 जगह: ${location ? location.trim() : 'जय भगवान कार्यालय, कमला नेहरू नगर, जयपुर'}`
   ];
 
   if (notes && notes.trim()) {
@@ -116,7 +116,7 @@ export function buildMeetingMessage({ title, date, time, location, notes, worker
   }
 
   lines.push('कृपया समय पर पहुँचें। धन्यवाद!');
-  lines.push('- जय भगवान वर्कर मैनेजमेंट');
+  lines.push('- जय भगवान हार्डवेयर एंड सेनेटरी');
 
   return lines.join('\n');
 }
