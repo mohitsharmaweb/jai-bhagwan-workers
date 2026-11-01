@@ -127,7 +127,7 @@ export default function Login() {
             to="/register"
             className="text-xs text-slate-400 hover:text-white transition-colors"
           >
-            ← कारीगर पंजीकरण फॉर्म पर जाएं (/register)
+            ← रजिस्ट्रेशन फॉर्म पर जाएं (/register)
           </Link>
         </div>
 

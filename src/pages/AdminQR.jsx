@@ -55,7 +55,7 @@ export default function AdminQR() {
       const pngUrl = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
       downloadLink.href = pngUrl;
-      downloadLink.download = 'Jai_Bhagwan_Worker_Registration_QR.png';
+      downloadLink.download = 'Jai_Bhagwan_Registration_QR.png';
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
@@ -79,7 +79,7 @@ export default function AdminQR() {
             रजिस्ट्रेशन QR कोड व लिंक
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            कारीगरों को जोड़ने के लिए QR कोड डाउनलोड करें या लिंक WhatsApp पर शेयर करें
+            रजिस्ट्रेशन के लिए QR कोड डाउनलोड करें या लिंक WhatsApp पर शेयर करें
           </p>
         </div>
 
@@ -107,7 +107,7 @@ export default function AdminQR() {
               <span>जय भगवान • जयपुर (Jaipur)</span>
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 pt-2">
-              कारीगर पंजीकरण (QR Code)
+              रजिस्ट्रेशन फॉर्म (QR Code)
             </h2>
             <p className="text-xs text-slate-500 font-medium">
               स्कैन करें और तुरंत अपना रजिस्ट्रेशन फॉर्म भरें
