@@ -179,7 +179,7 @@ export default function Navbar() {
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-bold text-amber-700 bg-amber-50"
           >
             <Users className="w-4 h-4 text-amber-600" />
-            <span>कारीगर पंजीकरण फॉर्म (/register)</span>
+            <span>पंजीकरण फॉर्म (/register)</span>
           </Link>
 
           {isAdmin ? (

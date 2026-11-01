@@ -95,7 +95,7 @@ function HomePage() {
             className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white rounded-2xl font-black text-base sm:text-lg shadow-xl shadow-orange-600/25 transition-all flex items-center justify-center gap-2.5 hover:scale-[1.02] active:scale-[0.98]"
           >
             <Users className="w-5 h-5" />
-            <span>कारीगर पंजीकरण फॉर्म भरें (Register Now)</span>
+            <span>पंजीकरण फॉर्म भरें (Register Now)</span>
           </Link>
         </div>
       </div>

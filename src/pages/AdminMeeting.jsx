@@ -28,7 +28,11 @@ import {
   AlertCircle, 
   Briefcase,
   MessageSquare,
-  Check
+  Check,
+  Search,
+  UserCheck,
+  X,
+  CheckSquare
 } from 'lucide-react';
 
 export default function AdminMeeting() {
@@ -60,6 +64,12 @@ export default function AdminMeeting() {
   const [queueWorkers, setQueueWorkers] = useState([]);
   const [sentWorkerIds, setSentWorkerIds] = useState(new Set());
   const [dispatchStatus, setDispatchStatus] = useState(null);
+
+  // Worker Selection State (Custom selection by name/category vs all)
+  const [selectionMode, setSelectionMode] = useState('custom'); // 'custom' | 'all'
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState(new Set());
+  const [workerFilterTrade, setWorkerFilterTrade] = useState('all');
+  const [workerSearch, setWorkerSearch] = useState('');
 
   // Modals & Feedback
   const [meetingToDelete, setMeetingToDelete] = useState(null);
@@ -114,6 +124,66 @@ export default function AdminMeeting() {
     });
   };
 
+  // Visible workers in custom selector (filtered by trade tab and search query)
+  const visibleWorkersForSelection = useMemo(() => {
+    return allWorkers.filter(w => {
+      if (workerFilterTrade !== 'all' && w.profession !== workerFilterTrade) {
+        return false;
+      }
+      if (workerSearch.trim()) {
+        const q = workerSearch.toLowerCase();
+        const matchName = (w.name || '').toLowerCase().includes(q);
+        const matchMobile = (w.mobile || '').includes(q);
+        const matchArea = (w.area || '').toLowerCase().includes(q);
+        if (!matchName && !matchMobile && !matchArea) return false;
+      }
+      return true;
+    });
+  }, [allWorkers, workerFilterTrade, workerSearch]);
+
+  // Breakdown of selected workers by trade (e.g. "3 इलेक्ट्रीशियन, 5 प्लंबर")
+  const selectedBreakdown = useMemo(() => {
+    const counts = {};
+    allWorkers.forEach(w => {
+      if (selectedWorkerIds.has(w.id)) {
+        const t = w.profession || 'Other';
+        counts[t] = (counts[t] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([trade, count]) => `${count} ${getProfessionLabel(trade).split('/')[0].trim()}`)
+      .join(', ');
+  }, [allWorkers, selectedWorkerIds]);
+
+  const handleToggleWorkerSelection = (id) => {
+    setSelectedWorkerIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectVisible = () => {
+    setSelectedWorkerIds(prev => {
+      const next = new Set(prev);
+      visibleWorkersForSelection.forEach(w => next.add(w.id));
+      return next;
+    });
+  };
+
+  const handleDeselectVisible = () => {
+    setSelectedWorkerIds(prev => {
+      const next = new Set(prev);
+      visibleWorkersForSelection.forEach(w => next.delete(w.id));
+      return next;
+    });
+  };
+
+  const handleClearAllSelection = () => {
+    setSelectedWorkerIds(new Set());
+  };
+
   // Live message preview string for the form
   const messagePreview = useMemo(() => {
     return buildMeetingMessage({
@@ -130,6 +200,11 @@ export default function AdminMeeting() {
   const prospectiveCount = useMemo(() => {
     return filterEligibleWorkers(allWorkers, formData.target_trade, formData.target_area).length;
   }, [allWorkers, formData.target_trade, formData.target_area]);
+
+  // Count of workers to be targeted upon submit
+  const targetCount = selectionMode === 'custom' 
+    ? selectedWorkerIds.size 
+    : prospectiveCount;
 
   // Handle Form Submission (Create Meeting & Queue Workers)
   const handleCreateMeeting = async (e) => {
@@ -152,18 +227,36 @@ export default function AdminMeeting() {
       return;
     }
 
-    setFormSubmitting(true);
-
-    try {
-      const created = await createMeeting(formData);
-      setMeetings(prev => [created, ...prev]);
-
-      // Filter targeted workers with consent
-      const targets = filterEligibleWorkers(
+    let targets = [];
+    if (selectionMode === 'custom') {
+      if (selectedWorkerIds.size === 0) {
+        showFeedback('error', 'कृपया मीटिंग के लिए कम से कम एक कारीगर चुनें (नीचे सूची में टिक करें) या "कैटेगरी अनुसार सभी" मोड चुनें।');
+        return;
+      }
+      targets = allWorkers.filter(w => selectedWorkerIds.has(w.id));
+    } else {
+      targets = filterEligibleWorkers(
         allWorkers,
         formData.target_trade,
         formData.target_area
       );
+      if (targets.length === 0) {
+        showFeedback('error', 'चयनित फ़िल्टर के अनुसार कोई कारीगर उपलब्ध नहीं है।');
+        return;
+      }
+    }
+
+    setFormSubmitting(true);
+
+    try {
+      const meetingPayload = {
+        ...formData,
+        target_trade: selectionMode === 'custom' ? (selectedBreakdown || 'चुनिंदा कारीगर') : formData.target_trade,
+        target_area: selectionMode === 'custom' ? 'सभी क्षेत्र' : formData.target_area
+      };
+
+      const created = await createMeeting(meetingPayload);
+      setMeetings(prev => [created, ...prev]);
 
       setActiveMeeting(created);
       setQueueWorkers(targets);
@@ -235,12 +328,20 @@ export default function AdminMeeting() {
 
   // "दोबारा भेजें" on an existing past meeting
   const handleReloadMeetingQueue = (meeting) => {
-    const targets = filterEligibleWorkers(
-      allWorkers,
-      meeting.target_trade,
-      meeting.target_area
-    );
+    let targets = [];
+    if (meeting.target_trade && meeting.target_trade !== 'all' && !meeting.target_trade.includes(',')) {
+      targets = filterEligibleWorkers(
+        allWorkers,
+        meeting.target_trade,
+        meeting.target_area
+      );
+      setSelectionMode('all');
+    } else {
+      targets = allWorkers;
+      setSelectionMode('custom');
+    }
 
+    setSelectedWorkerIds(new Set(targets.map(w => w.id)));
     setActiveMeeting(meeting);
     setQueueWorkers(targets);
     setSentWorkerIds(new Set());
@@ -416,45 +517,271 @@ export default function AdminMeeting() {
               />
             </div>
 
-            {/* Target Audience: Trade & Area Dropdowns */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Briefcase className="w-3.5 h-3.5 text-amber-600" />
-                  <span>लक्षित कारीगर (ट्रेड)</span>
+            {/* Worker Selection Section */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-amber-600" />
+                  <span>कारीगर आमंत्रण चयन (Select Workers)</span>
                 </label>
-                <select
-                  value={formData.target_trade}
-                  onChange={(e) => setFormData(prev => ({ ...prev, target_trade: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all font-semibold text-slate-800"
-                >
-                  <option value="all">सभी ट्रेड / कार्य (All Trades)</option>
-                  {PROFESSIONS.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.labelHi} ({p.labelEn})
-                    </option>
-                  ))}
-                </select>
+                <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                  {selectionMode === 'custom' ? `${selectedWorkerIds.size} कारीगर चुने गए` : `सभी (${prospectiveCount})`}
+                </span>
               </div>
 
-              <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-amber-600" />
-                  <span>लक्षित इलाका (जयपुर)</span>
-                </label>
-                <select
-                  value={formData.target_area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, target_area: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all font-semibold text-slate-800"
+              {/* Selection Mode Toggle Tabs */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setSelectionMode('custom')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    selectionMode === 'custom'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  <option value="all">सभी क्षेत्र / इलाके (All Jaipur)</option>
-                  {JAIPUR_AREAS.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.labelHi} ({a.labelEn})
-                    </option>
-                  ))}
-                </select>
+                  <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                  <span>नाम व ट्रेड से चुनें ({selectedWorkerIds.size})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectionMode('all')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    selectionMode === 'all'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-slate-600" />
+                  <span>कैटेगरी अनुसार सभी ({prospectiveCount})</span>
+                </button>
               </div>
+
+              {/* If selectionMode === 'custom': show granular interactive selector */}
+              {selectionMode === 'custom' ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4 space-y-3">
+                  
+                  {/* Category Filter Pills */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold px-0.5">
+                      <span>ट्रेड चुनें (Select Trade):</span>
+                      {selectedWorkerIds.size > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearAllSelection}
+                          className="text-rose-600 font-bold hover:underline"
+                        >
+                          सब हटाएं (Clear All)
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pb-1">
+                      <button
+                        type="button"
+                        onClick={() => setWorkerFilterTrade('all')}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+                          workerFilterTrade === 'all'
+                            ? 'bg-amber-600 text-white shadow-sm'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>सभी कार्य</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          workerFilterTrade === 'all' ? 'bg-amber-700 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {allWorkers.length}
+                        </span>
+                      </button>
+
+                      {PROFESSIONS.map(p => {
+                        const totalInTrade = allWorkers.filter(w => w.profession === p.id).length;
+                        if (totalInTrade === 0) return null;
+                        const selectedInTrade = allWorkers.filter(w => w.profession === p.id && selectedWorkerIds.has(w.id)).length;
+                        const isTabActive = workerFilterTrade === p.id;
+
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setWorkerFilterTrade(p.id)}
+                            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                              isTabActive
+                                ? 'bg-amber-600 text-white shadow-sm'
+                                : selectedInTrade > 0
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
+                                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span>{p.labelHi.split('/')[0].trim()}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                              isTabActive 
+                                ? 'bg-amber-700 text-white' 
+                                : selectedInTrade > 0 
+                                ? 'bg-amber-600 text-white font-bold' 
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {selectedInTrade > 0 ? `${selectedInTrade}/${totalInTrade}` : totalInTrade}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Search and Action Buttons */}
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <div className="relative flex-1 w-full">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="नाम या मोबाइल से खोजें..."
+                        value={workerSearch}
+                        onChange={(e) => setWorkerSearch(e.target.value)}
+                        className="w-full pl-8 pr-7 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-1 focus:ring-amber-500 outline-none"
+                      />
+                      {workerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setWorkerSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
+                      <button
+                        type="button"
+                        onClick={handleSelectVisible}
+                        className="px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-colors shadow-2xs"
+                      >
+                        दिख रहे सभी चुनें ({visibleWorkersForSelection.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeselectVisible}
+                        className="px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-[11px] font-bold text-slate-600 transition-colors"
+                      >
+                        हटाएं
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Selected Breakdown Box */}
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-amber-950 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-700" />
+                        <span>कुल {selectedWorkerIds.size} कारीगर चुने गए</span>
+                      </span>
+                      <span className="text-[10px] text-amber-800 font-bold">
+                        {selectedWorkerIds.size === 0 ? 'सूची से चुनें' : 'तैयार ✓'}
+                      </span>
+                    </div>
+                    {selectedBreakdown ? (
+                      <p className="text-[11px] text-amber-800 font-bold mt-1">
+                        🎯 {selectedBreakdown}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        नीचे दिए गए कारीगरों पर क्लिक करके चुनें (उदा. 3 इलेक्ट्रीशियन, 5 प्लंबर)।
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Worker Checklist (Scrollable) */}
+                  <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-white">
+                    {visibleWorkersForSelection.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-500 font-medium">
+                        इस फ़िल्टर में कोई कारीगर नहीं मिला।
+                      </div>
+                    ) : (
+                      visibleWorkersForSelection.map(worker => {
+                        const isSelected = selectedWorkerIds.has(worker.id);
+                        return (
+                          <div
+                            key={worker.id}
+                            onClick={() => handleToggleWorkerSelection(worker.id)}
+                            className={`p-2.5 flex items-center justify-between gap-2.5 cursor-pointer transition-colors select-none ${
+                              isSelected ? 'bg-amber-50/70 hover:bg-amber-50' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all flex-shrink-0 ${
+                                isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300 bg-white'
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                    {worker.name}
+                                  </span>
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700 flex-shrink-0">
+                                    {getProfessionLabel(worker.profession).split('/')[0].trim()}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-500 truncate">
+                                  {getAreaLabel(worker.area)} • 📞 +91 {normalizePhoneNumber(worker.whatsapp || worker.mobile)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                              isSelected ? 'bg-amber-200 text-amber-900' : 'text-slate-400 bg-slate-50'
+                            }`}>
+                              {isSelected ? 'चुना गया ✓' : '+ जोड़ें'}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                </div>
+              ) : (
+                /* Mode 2: Category Dropdowns */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-amber-600" />
+                      <span>लक्षित ट्रेड</span>
+                    </label>
+                    <select
+                      value={formData.target_trade}
+                      onChange={(e) => setFormData(prev => ({ ...prev, target_trade: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-semibold text-slate-800"
+                    >
+                      <option value="all">सभी ट्रेड / कार्य (All Trades)</option>
+                      {PROFESSIONS.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.labelHi} ({p.labelEn})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                      <span>लक्षित इलाका (जयपुर)</span>
+                    </label>
+                    <select
+                      value={formData.target_area}
+                      onChange={(e) => setFormData(prev => ({ ...prev, target_area: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-semibold text-slate-800"
+                    >
+                      <option value="all">सभी क्षेत्र / इलाके (All Jaipur)</option>
+                      {JAIPUR_AREAS.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.labelHi} ({a.labelEn})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Extra Notes */}
@@ -472,7 +799,7 @@ export default function AdminMeeting() {
               />
             </div>
 
-            {/* Submit Button with Prospective Count */}
+            {/* Submit Button with Dynamic Target Count */}
             <div className="pt-2">
               <button
                 type="submit"
@@ -487,12 +814,16 @@ export default function AdminMeeting() {
                 ) : (
                   <>
                     <Calendar className="w-5 h-5" />
-                    <span>मीटिंग सहेजें व कतार बनाएं ({prospectiveCount} कारीगर)</span>
+                    <span>मीटिंग सहेजें व कतार बनाएं ({targetCount} कारीगर)</span>
                   </>
                 )}
               </button>
               <p className="text-center text-[11px] text-slate-500 mt-2">
-                चयनित फिल्टर के अनुसार कुल <strong className="text-amber-700">{prospectiveCount}</strong> सहमति-प्राप्त (WhatsApp Consent) कारीगरों को संदेश भेजा जाएगा।
+                {selectionMode === 'custom' ? (
+                  <>आपकी पसंद अनुसार <strong className="text-amber-700">{selectedWorkerIds.size} कारीगरों</strong> को WhatsApp पर संदेश भेजा जाएगा।</>
+                ) : (
+                  <>चयनित फिल्टर के अनुसार कुल <strong className="text-amber-700">{prospectiveCount} कारीगरों</strong> को WhatsApp पर संदेश भेजा जाएगा।</>
+                )}
               </p>
             </div>
 

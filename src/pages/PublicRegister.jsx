@@ -158,10 +158,10 @@ export default function PublicRegister() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            कारीगर पंजीकरण फॉर्म
+            पंजीकरण फॉर्म
           </h1>
           <p className="text-sm font-semibold text-amber-700 mt-1">
-            Worker Registration Form
+            Registration Form
           </p>
           <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
             जयपुर के सभी कुशल मिस्त्री, इलेक्ट्रीशियन, प्लंबर व कारीगर साथी नीचे अपनी जानकारी भरें ताकि आपको समय पर काम व त्योहारों के संदेश मिल सकें।

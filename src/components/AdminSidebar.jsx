@@ -123,7 +123,7 @@ export default function AdminSidebar() {
         >
           <div className="flex items-center gap-3">
             <Building2 className="w-4 h-4 text-amber-600" />
-            <span>कारीगर रजिस्ट्रेशन फॉर्म</span>
+            <span>रजिस्ट्रेशन फॉर्म</span>
           </div>
           <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
         </a>
