@@ -144,7 +144,7 @@ function HomePage() {
           जयपुर के मुख्य कार्य क्षेत्र (Available Trades)
         </h4>
         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-          {['मिस्त्री (राजमिस्त्री)', 'इलेक्ट्रीशियन', 'प्लंबर', 'पेंटर', 'कारपेंटर', 'हेल्पर / लेबर', 'ड्राइवर', 'टाइल्स कारीगर'].map((trade) => (
+          {['मिस्त्री (राजमिस्त्री)', 'इलेक्ट्रीशियन', 'प्लंबर', 'पेंटर', 'कारपेंटर', 'ठेकेदार (Contractor)', 'बिल्डर (Builder)', 'दुकानदार (Shopkeeper)', 'हेल्पर / लेबर', 'ड्राइवर'].map((trade) => (
             <span
               key={trade}
               className="px-4 py-2 rounded-xl bg-white text-slate-800 font-extrabold text-xs sm:text-sm border border-slate-200 shadow-sm"

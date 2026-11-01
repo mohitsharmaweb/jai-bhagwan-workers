@@ -134,7 +134,7 @@ export default function AdminQR() {
 
           <div className="space-y-1">
             <p className="text-sm font-bold text-slate-800">
-              मिस्त्री • इलेक्ट्रीशियन • प्लंबर • पेंटर • बढ़ई
+              मिस्त्री • इलेक्ट्रीशियन • प्लंबर • ठेकेदार • बिल्डर • दुकानदार
             </p>
             <p className="text-xs text-amber-700 font-semibold">
               अपने मोबाइल के कैमरे या स्कैनर से ऊपर दिए गए कोड को स्कैन करें

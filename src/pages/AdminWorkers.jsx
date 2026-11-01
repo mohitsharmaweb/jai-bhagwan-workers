@@ -61,6 +61,7 @@ export default function AdminWorkers() {
     area: 'Mansarovar',
     area_other: '',
     address: '',
+    reference: '',
     consent: true
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -93,9 +94,10 @@ export default function AdminWorkers() {
         const matchesName = (w.name || '').toLowerCase().includes(query);
         const matchesMobile = (w.mobile || '').includes(query);
         const matchesAddress = (w.address || '').toLowerCase().includes(query);
+        const matchesReference = (w.reference || '').toLowerCase().includes(query);
         const matchesProfOther = (w.profession_other || '').toLowerCase().includes(query);
         const matchesAreaOther = (w.area_other || '').toLowerCase().includes(query);
-        if (!matchesName && !matchesMobile && !matchesAddress && !matchesProfOther && !matchesAreaOther) {
+        if (!matchesName && !matchesMobile && !matchesAddress && !matchesReference && !matchesProfOther && !matchesAreaOther) {
           return false;
         }
       }
@@ -136,6 +138,7 @@ export default function AdminWorkers() {
       area: worker.area || 'Mansarovar',
       area_other: worker.area_other || '',
       address: worker.address || '',
+      reference: worker.reference || '',
       consent: worker.consent !== false
     });
     setFormError('');
@@ -154,6 +157,7 @@ export default function AdminWorkers() {
       area: 'Mansarovar',
       area_other: '',
       address: '',
+      reference: '',
       consent: true
     });
     setFormError('');
@@ -193,6 +197,7 @@ export default function AdminWorkers() {
           area: formData.area,
           area_other: formData.area_other || null,
           address: formData.address ? formData.address.trim() : null,
+          reference: formData.reference ? formData.reference.trim() : null,
           consent: Boolean(formData.consent)
         });
         setWorkers(prev => prev.map(w => w.id === editingWorker.id ? { ...w, ...updated } : w));
@@ -248,6 +253,7 @@ export default function AdminWorkers() {
       'Experience (वर्ष)',
       'Jaipur Area (क्षेत्र)',
       'Full Address (पता)',
+      'Reference (रेफरेंस / किसके पास काम कर रहे हैं)',
       'WhatsApp Consent',
       'Registration Date'
     ];
@@ -261,6 +267,7 @@ export default function AdminWorkers() {
       w.experience || 0,
       `"${w.area === 'Other' && w.area_other ? w.area_other : getAreaLabel(w.area, 'hi')}"`,
       `"${(w.address || '').replace(/"/g, '""')}"`,
+      `"${(w.reference || '').replace(/"/g, '""')}"`,
       w.consent ? 'हाँ (Yes)' : 'नहीं (No)',
       new Date(w.created_at || Date.now()).toLocaleDateString('en-IN')
     ]);
@@ -454,7 +461,12 @@ export default function AdminWorkers() {
                         <td className="py-3.5 px-5">
                           <p className="font-extrabold text-slate-900">{worker.name}</p>
                           {worker.address && (
-                            <p className="text-[11px] text-slate-400 line-clamp-1">{worker.address}</p>
+                            <p className="text-[11px] text-slate-400 line-clamp-1">📍 {worker.address}</p>
+                          )}
+                          {worker.reference && (
+                            <p className="text-[11px] text-amber-800 font-semibold line-clamp-1 mt-0.5">
+                              🤝 रेफरेंस / काम: {worker.reference}
+                            </p>
                           )}
                         </td>
 
@@ -574,6 +586,12 @@ export default function AdminWorkers() {
                   {worker.address && (
                     <p className="text-xs text-slate-500 leading-snug">
                       📍 {worker.address}
+                    </p>
+                  )}
+
+                  {worker.reference && (
+                    <p className="text-xs text-amber-800 font-semibold bg-amber-50 px-2.5 py-1.5 rounded-xl border border-amber-200/70 leading-snug">
+                      🤝 रेफरेंस / काम: {worker.reference}
                     </p>
                   )}
 
@@ -753,6 +771,22 @@ export default function AdminWorkers() {
                   placeholder="मकान नंबर, गली या लैंडमार्क"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">
+                  रेफरेंस / किसके पास काम कर रहे हैं (Reference)
+                </label>
+                <input
+                  type="text"
+                  value={formData.reference}
+                  onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
+                  placeholder="उदा. ठेकेदार रमेश जी, शर्मा बिल्डर्स, या खुद का काम"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  किसके संदर्भ से आए हैं या किस ठेकेदार / बिल्डर / फर्म के अधीन कार्यरत हैं
+                </p>
               </div>
 
               <div className="pt-2">

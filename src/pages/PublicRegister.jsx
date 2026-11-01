@@ -17,7 +17,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Building2,
-  Lock
+  Lock,
+  UserCheck
 } from 'lucide-react';
 
 export default function PublicRegister() {
@@ -35,6 +36,7 @@ export default function PublicRegister() {
     area: 'Mansarovar',
     area_other: '',
     address: '',
+    reference: '',
     consent: true
   });
 
@@ -164,7 +166,7 @@ export default function PublicRegister() {
             Registration Form
           </p>
           <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
-            जयपुर के सभी कुशल मिस्त्री, इलेक्ट्रीशियन, प्लंबर व कारीगर साथी नीचे अपनी जानकारी भरें ताकि आपको समय पर काम व त्योहारों के संदेश मिल सकें।
+            जयपुर के सभी कुशल कारीगर, ठेकेदार, बिल्डर, दुकानदार व साथी नीचे अपनी जानकारी भरें ताकि आपको समय पर काम व महत्वपूर्ण सूचनाएँ मिल सकें।
           </p>
         </div>
 
@@ -395,6 +397,27 @@ export default function PublicRegister() {
               onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
               className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
+          </div>
+
+          {/* Field 8: Reference / Working Under (Optional) */}
+          <div className="space-y-1.5">
+            <label className="block text-sm sm:text-base font-bold text-slate-800 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-amber-600" />
+                रेफरेंस / किसके पास काम कर रहे हैं <span className="text-xs font-normal text-slate-500">(Reference / Contractor)</span>
+              </span>
+              <span className="text-xs font-medium text-slate-400">वैकल्पिक</span>
+            </label>
+            <input
+              type="text"
+              placeholder="उदा. शर्मा ठेकेदार, गुप्ता बिल्डर्स, दुकान का नाम या संदर्भ व्यक्ति"
+              value={formData.reference}
+              onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
+              className="w-full px-4 py-3 rounded-2xl border border-slate-300 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+            />
+            <p className="text-[11px] text-slate-500 pl-1">
+              (यह व्यक्ति किसके संदर्भ/रेफरेंस से आया है या वर्तमान में किस ठेकेदार/बिल्डर/दुकान के पास काम कर रहा है)
+            </p>
           </div>
 
           {/* Field 8: Consent Checkbox */}

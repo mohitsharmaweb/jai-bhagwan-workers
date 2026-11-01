@@ -45,6 +45,7 @@ export const registerWorker = async (workerData) => {
     area: workerData.area,
     area_other: workerData.area_other || null,
     address: workerData.address ? workerData.address.trim() : null,
+    reference: workerData.reference ? workerData.reference.trim() : null,
     consent: Boolean(workerData.consent),
     status: 'active',
     created_at: new Date().toISOString()

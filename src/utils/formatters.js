@@ -116,7 +116,7 @@ export function buildMeetingMessage({ title, date, time, location, notes, worker
   }
 
   lines.push('कृपया समय पर पहुँचें। धन्यवाद!');
-  lines.push('- जय भगवान हार्डवेयर एंड सेनेटरी');
+  lines.push('- जय भगवान हार्डवेयर एंड सैनिटरी');
 
   return lines.join('\n');
 }
