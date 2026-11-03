@@ -171,10 +171,10 @@ export default function PublicRegister() {
       });
     } catch (err) {
       console.error('Registration submission error:', err);
-      if (err.code === '23505' || err.message === 'DUPLICATE_MOBILE') {
+      if (err.code === '23505' || err.message === 'DUPLICATE_MOBILE' || (err.message && err.message.includes('unique'))) {
         setErrorMsg('यह मोबाइल नंबर पहले से रजिस्टर है।');
       } else {
-        setErrorMsg('कुछ गड़बड़ हो गई, दोबारा कोशिश करें।');
+        setErrorMsg(err.message || 'कुछ गड़बड़ हो गई, दोबारा कोशिश करें।');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {

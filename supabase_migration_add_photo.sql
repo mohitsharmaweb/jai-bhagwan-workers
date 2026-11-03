@@ -5,3 +5,4 @@
 
 ALTER TABLE public.workers 
 ADD COLUMN IF NOT EXISTS photo text;
+

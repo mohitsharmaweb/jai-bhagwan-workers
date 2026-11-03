@@ -52,9 +52,23 @@ export const registerWorker = async (workerData) => {
     created_at: new Date().toISOString()
   };
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from('workers')
     .insert([payload]);
+
+  // Self-healing fallback: if 'photo' or 'reference' columns do not exist yet in Supabase schema cache
+  if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('schema cache')))) {
+    console.warn('Supabase missing optional columns, falling back to core schema:', error.message);
+    const fallbackPayload = { ...payload };
+    delete fallbackPayload.photo;
+    delete fallbackPayload.reference;
+
+    const retryRes = await supabase
+      .from('workers')
+      .insert([fallbackPayload]);
+
+    error = retryRes.error;
+  }
 
   if (error) {
     const err = new Error(error.message || 'पंजीकरण विफल रहा। कृपया पुनः प्रयास करें।');
@@ -112,12 +126,30 @@ export const updateWorker = async (id, updates) => {
     payload.whatsapp = normalizePhoneNumber(payload.whatsapp);
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('workers')
     .update(payload)
     .eq('id', id)
     .select()
     .single();
+
+  // Self-healing fallback: if 'photo' or 'reference' columns do not exist yet in Supabase schema cache
+  if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('schema cache')))) {
+    console.warn('Supabase missing optional columns on update, falling back to core schema:', error.message);
+    const fallbackPayload = { ...payload };
+    delete fallbackPayload.photo;
+    delete fallbackPayload.reference;
+
+    const retryRes = await supabase
+      .from('workers')
+      .update(fallbackPayload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    data = retryRes.data;
+    error = retryRes.error;
+  }
 
   if (error) {
     console.error('Error updating worker in Supabase:', error);
