@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   fetchAllWorkers, 
@@ -7,6 +7,7 @@ import {
   deleteWorker 
 } from '../lib/supabase';
 import { normalizePhoneNumber } from '../utils/formatters';
+import { compressImage } from '../utils/imageCompressor';
 import { PROFESSIONS, getProfessionLabel } from '../constants/professions';
 import { JAIPUR_AREAS, getAreaLabel } from '../constants/areas';
 import { createWhatsAppChatUrl } from '../services/whatsappService';
@@ -27,7 +28,10 @@ import {
   AlertCircle,
   ShieldCheck,
   Building2,
-  ChevronDown
+  ChevronDown,
+  Camera,
+  Image as ImageIcon,
+  Eye
 } from 'lucide-react';
 
 export default function AdminWorkers() {
@@ -49,6 +53,9 @@ export default function AdminWorkers() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(shouldOpenAdd);
   const [editingWorker, setEditingWorker] = useState(null);
   const [deletingWorker, setDeletingWorker] = useState(null);
+  const [photoPreviewModal, setPhotoPreviewModal] = useState(null); // { url, name }
+  const photoInputRef = useRef(null);
+  const [compressingModalPhoto, setCompressingModalPhoto] = useState(false);
 
   // Form State for Add / Edit
   const [formData, setFormData] = useState({
@@ -62,6 +69,7 @@ export default function AdminWorkers() {
     area_other: '',
     address: '',
     reference: '',
+    photo: '',
     consent: true
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -139,6 +147,7 @@ export default function AdminWorkers() {
       area_other: worker.area_other || '',
       address: worker.address || '',
       reference: worker.reference || '',
+      photo: worker.photo || '',
       consent: worker.consent !== false
     });
     setFormError('');
@@ -158,10 +167,33 @@ export default function AdminWorkers() {
       area_other: '',
       address: '',
       reference: '',
+      photo: '',
       consent: true
     });
     setFormError('');
     setIsAddModalOpen(true);
+  };
+
+  // Handle Photo selection for Admin Modal
+  const handleModalPhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCompressingModalPhoto(true);
+    try {
+      const compressed = await compressImage(file, 600, 600, 0.75);
+      setFormData(prev => ({ ...prev, photo: compressed }));
+    } catch (err) {
+      console.error('Modal photo compression error:', err);
+      alert('फोटो प्रोसेस करने में समस्या आई।');
+    } finally {
+      setCompressingModalPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleModalRemovePhoto = () => {
+    setFormData(prev => ({ ...prev, photo: '' }));
   };
 
   // Save (Add or Update)
@@ -198,6 +230,7 @@ export default function AdminWorkers() {
           area_other: formData.area_other || null,
           address: formData.address ? formData.address.trim() : null,
           reference: formData.reference ? formData.reference.trim() : null,
+          photo: formData.photo || null,
           consent: Boolean(formData.consent)
         });
         setWorkers(prev => prev.map(w => w.id === editingWorker.id ? { ...w, ...updated } : w));
@@ -254,6 +287,7 @@ export default function AdminWorkers() {
       'Jaipur Area (क्षेत्र)',
       'Full Address (पता)',
       'Reference (रेफरेंस / किसके पास काम कर रहे हैं)',
+      'Photo (पहचान फोटो)',
       'WhatsApp Consent',
       'Registration Date'
     ];
@@ -268,6 +302,7 @@ export default function AdminWorkers() {
       `"${w.area === 'Other' && w.area_other ? w.area_other : getAreaLabel(w.area, 'hi')}"`,
       `"${(w.address || '').replace(/"/g, '""')}"`,
       `"${(w.reference || '').replace(/"/g, '""')}"`,
+      w.photo ? 'हाँ (उपलब्ध)' : 'नहीं',
       w.consent ? 'हाँ (Yes)' : 'नहीं (No)',
       new Date(w.created_at || Date.now()).toLocaleDateString('en-IN')
     ]);
@@ -459,15 +494,40 @@ export default function AdminWorkers() {
                     return (
                       <tr key={worker.id} className="hover:bg-amber-50/30 transition-colors">
                         <td className="py-3.5 px-5">
-                          <p className="font-extrabold text-slate-900">{worker.name}</p>
-                          {worker.address && (
-                            <p className="text-[11px] text-slate-400 line-clamp-1">📍 {worker.address}</p>
-                          )}
-                          {worker.reference && (
-                            <p className="text-[11px] text-amber-800 font-semibold line-clamp-1 mt-0.5">
-                              🤝 रेफरेंस / काम: {worker.reference}
-                            </p>
-                          )}
+                          <div className="flex items-center gap-3">
+                            {worker.photo ? (
+                              <button
+                                type="button"
+                                onClick={() => setPhotoPreviewModal({ url: worker.photo, name: worker.name })}
+                                className="relative group flex-shrink-0"
+                                title="बड़ी फोटो देखें"
+                              >
+                                <img
+                                  src={worker.photo}
+                                  alt={worker.name}
+                                  className="w-10 h-10 rounded-full object-cover border-2 border-amber-300 shadow-sm group-hover:border-amber-500 transition-all"
+                                />
+                                <span className="absolute inset-0 bg-black/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <Eye className="w-3.5 h-3.5 text-white" />
+                                </span>
+                              </button>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                {(worker.name || 'W').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-slate-900">{worker.name}</p>
+                              {worker.address && (
+                                <p className="text-[11px] text-slate-400 line-clamp-1">📍 {worker.address}</p>
+                              )}
+                              {worker.reference && (
+                                <p className="text-[11px] text-amber-800 font-semibold line-clamp-1 mt-0.5">
+                                  🤝 रेफरेंस / काम: {worker.reference}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </td>
 
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
@@ -555,12 +615,32 @@ export default function AdminWorkers() {
 
               return (
                 <div key={worker.id} className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="text-base font-extrabold text-slate-900">{worker.name}</h4>
-                      <p className="text-xs font-mono font-bold text-amber-700 mt-0.5">+91 {worker.mobile}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {worker.photo ? (
+                        <button
+                          type="button"
+                          onClick={() => setPhotoPreviewModal({ url: worker.photo, name: worker.name })}
+                          className="relative flex-shrink-0"
+                          title="बड़ी फोटो देखें"
+                        >
+                          <img
+                            src={worker.photo}
+                            alt={worker.name}
+                            className="w-12 h-12 rounded-2xl object-cover border-2 border-amber-300 shadow-sm"
+                          />
+                        </button>
+                      ) : (
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-sm flex-shrink-0">
+                          {(worker.name || 'W').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="text-base font-extrabold text-slate-900 truncate">{worker.name}</h4>
+                        <p className="text-xs font-mono font-bold text-amber-700 mt-0.5">+91 {worker.mobile}</p>
+                      </div>
                     </div>
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 font-bold text-xs border border-amber-200">
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 font-bold text-xs border border-amber-200 flex-shrink-0">
                       {worker.profession === 'Other' && worker.profession_other 
                         ? worker.profession_other 
                         : getProfessionLabel(worker.profession, 'hi').split('/')[0]}
@@ -789,6 +869,65 @@ export default function AdminWorkers() {
                 </p>
               </div>
 
+              {/* Photo Upload in Admin Modal */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-amber-600" />
+                    पहचान फोटो (Worker Photo)
+                  </span>
+                  <span className="text-xs font-normal text-slate-400">वैकल्पिक</span>
+                </label>
+
+                <input
+                  type="file"
+                  ref={photoInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleModalPhotoSelect}
+                />
+
+                {formData.photo ? (
+                  <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <img
+                      src={formData.photo}
+                      alt="Preview"
+                      className="w-14 h-14 rounded-xl object-cover border border-amber-300 shadow-sm flex-shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-emerald-700">फोटो संलग्न है</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => photoInputRef.current?.click()}
+                          className="text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:underline"
+                        >
+                          बदलें (Change)
+                        </button>
+                        <span className="text-slate-300">•</span>
+                        <button
+                          type="button"
+                          onClick={handleModalRemovePhoto}
+                          className="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline"
+                        >
+                          हटाएं (Remove)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={compressingModalPhoto}
+                    onClick={() => photoInputRef.current?.click()}
+                    className="w-full py-2.5 px-3 rounded-xl border border-dashed border-slate-300 hover:border-amber-400 bg-slate-50 hover:bg-amber-50/50 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    <Camera className="w-4 h-4 text-amber-600" />
+                    <span>{compressingModalPhoto ? 'फोटो प्रोसेस हो रही है...' : '+ फोटो अपलोड करें (Upload Photo)'}</span>
+                  </button>
+                )}
+              </div>
+
               <div className="pt-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -861,6 +1000,49 @@ export default function AdminWorkers() {
                 हाँ, हटाएं
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox Modal */}
+      {photoPreviewModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setPhotoPreviewModal(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-4 sm:p-5 max-w-sm w-full space-y-3.5 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="min-w-0 pr-2">
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">पहचान फोटो</h3>
+                <p className="text-xs text-amber-700 font-bold truncate">{photoPreviewModal.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhotoPreviewModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 flex items-center justify-center max-h-96">
+              <img
+                src={photoPreviewModal.url}
+                alt={photoPreviewModal.name}
+                className="w-full h-auto max-h-80 object-contain rounded-2xl"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPhotoPreviewModal(null)}
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
+            >
+              बंद करें (Close)
+            </button>
           </div>
         </div>
       )}

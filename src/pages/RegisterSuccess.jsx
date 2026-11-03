@@ -63,42 +63,73 @@ export default function RegisterSuccess() {
 
         {/* Summary Card if worker data present */}
         {worker && (
-          <div className="mt-6 bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left space-y-2.5">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-1.5">
-              पंजीकृत विवरण (Summary):
-            </h3>
-
-            <div className="flex items-center gap-2 text-sm text-slate-800 font-bold">
-              <UserCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>{worker.name}</span>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
-              <Phone className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span className="font-semibold">+91 {worker.mobile}</span>
-              {worker.whatsapp && worker.whatsapp !== worker.mobile && (
-                <span className="text-[11px] text-slate-500">(WA: {worker.whatsapp})</span>
+          <div className="mt-6 bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                पंजीकृत विवरण (Summary):
+              </h3>
+              {worker.photo && (
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  फोटो संलग्न ✓
+                </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
-              <Briefcase className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-              <span>
-                {worker.profession === 'Other' && worker.profession_other 
-                  ? worker.profession_other 
-                  : getProfessionLabel(worker.profession, 'hi')}
-                {' '}• {worker.experience || '0'} वर्ष अनुभव
-              </span>
+            <div className="flex items-start gap-3">
+              {worker.photo ? (
+                <img
+                  src={worker.photo}
+                  alt={worker.name}
+                  className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm flex-shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-200 text-amber-800 flex items-center justify-center font-black text-lg flex-shrink-0">
+                  {(worker.name || 'W').charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 text-sm text-slate-900 font-bold">
+                  <UserCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="truncate">{worker.name}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-700">
+                  <Phone className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                  <span className="font-semibold">+91 {worker.mobile}</span>
+                  {worker.whatsapp && worker.whatsapp !== worker.mobile && (
+                    <span className="text-[11px] text-slate-500">(WA: {worker.whatsapp})</span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
-              <MapPin className="w-4 h-4 text-rose-600 flex-shrink-0" />
-              <span>
-                {worker.area === 'Other' && worker.area_other 
-                  ? worker.area_other 
-                  : getAreaLabel(worker.area, 'hi')}
-                {' '}(जयपुर)
-              </span>
+            <div className="pt-1 border-t border-slate-200/60 space-y-2">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
+                <Briefcase className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                <span>
+                  {worker.profession === 'Other' && worker.profession_other 
+                    ? worker.profession_other 
+                    : getProfessionLabel(worker.profession, 'hi')}
+                  {' '}• {worker.experience || '0'} वर्ष अनुभव
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
+                <MapPin className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                <span>
+                  {worker.area === 'Other' && worker.area_other 
+                    ? worker.area_other 
+                    : getAreaLabel(worker.area, 'hi')}
+                  {' '}(जयपुर)
+                </span>
+              </div>
+
+              {worker.reference && (
+                <p className="text-xs text-amber-800 font-semibold bg-amber-50 px-2 py-1 rounded-lg border border-amber-200/60">
+                  🤝 रेफरेंस: {worker.reference}
+                </p>
+              )}
             </div>
           </div>
         )}

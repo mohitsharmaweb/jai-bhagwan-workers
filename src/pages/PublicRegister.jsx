@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerWorker } from '../lib/supabase';
 import { normalizePhoneNumber } from '../utils/formatters';
+import { compressImage } from '../utils/imageCompressor';
 import { PROFESSIONS } from '../constants/professions';
 import { JAIPUR_AREAS } from '../constants/areas';
 import { 
@@ -18,11 +19,17 @@ import {
   ShieldCheck,
   Building2,
   Lock,
-  UserCheck
+  UserCheck,
+  Camera,
+  Image as ImageIcon,
+  Trash2,
+  Upload
 } from 'lucide-react';
 
 export default function PublicRegister() {
   const navigate = useNavigate();
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -37,10 +44,13 @@ export default function PublicRegister() {
     area_other: '',
     address: '',
     reference: '',
+    photo: '',
     consent: true
   });
 
   const [loading, setLoading] = useState(false);
+  const [compressingPhoto, setCompressingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [mobileError, setMobileError] = useState('');
 
@@ -73,6 +83,32 @@ export default function PublicRegister() {
       sameAsMobile: checked,
       whatsapp: checked ? prev.mobile : prev.whatsapp
     }));
+  };
+
+  // Handle Photo selection and client-side compression (<150KB)
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError('');
+    setCompressingPhoto(true);
+
+    try {
+      // Compress to 600x600 crisp lightweight base64 JPEG
+      const compressedBase64 = await compressImage(file, 600, 600, 0.75);
+      setFormData(prev => ({ ...prev, photo: compressedBase64 }));
+    } catch (err) {
+      console.error('Photo compression error:', err);
+      setPhotoError('फोटो प्रोसेस करने में समस्या आई। कृपया दोबारा प्रयास करें।');
+    } finally {
+      setCompressingPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setFormData(prev => ({ ...prev, photo: '' }));
+    setPhotoError('');
   };
 
   const handleSubmit = async (e) => {
@@ -418,6 +454,114 @@ export default function PublicRegister() {
             <p className="text-[11px] text-slate-500 pl-1">
               (यह व्यक्ति किसके संदर्भ/रेफरेंस से आया है या वर्तमान में किस ठेकेदार/बिल्डर/दुकान के पास काम कर रहा है)
             </p>
+          </div>
+
+          {/* Field 9: Worker Photo / Selfie (Optional) */}
+          <div className="space-y-2 bg-gradient-to-b from-slate-50 to-amber-50/30 p-4 sm:p-5 rounded-2xl border border-slate-200">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
+                <Camera className="w-4 h-4 text-amber-600" />
+                <span>आपकी फोटो <span className="text-xs font-normal text-slate-500">(Photo / Selfie)</span></span>
+              </label>
+              <span className="text-xs font-medium text-slate-400">वैकल्पिक</span>
+            </div>
+            
+            <p className="text-xs text-slate-500">
+              पहचान के लिए अपनी साफ फोटो खींचें या गैलरी से अपलोड करें ताकि आसानी से पहचान हो सके।
+            </p>
+
+            {/* Hidden File Inputs */}
+            <input
+              type="file"
+              ref={cameraInputRef}
+              accept="image/*"
+              capture="user"
+              className="hidden"
+              onChange={handlePhotoSelect}
+            />
+            <input
+              type="file"
+              ref={galleryInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoSelect}
+            />
+
+            {compressingPhoto ? (
+              <div className="py-6 flex flex-col items-center justify-center gap-2 bg-white rounded-xl border border-dashed border-amber-300">
+                <div className="w-6 h-6 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-xs font-bold text-amber-800">फोटो तैयार की जा रही है...</p>
+              </div>
+            ) : formData.photo ? (
+              /* Photo Preview Card */
+              <div className="bg-white p-3 rounded-xl border border-emerald-200 flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={formData.photo}
+                      alt="Profile preview"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-emerald-400 shadow"
+                    />
+                    <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center text-[11px] font-bold shadow">
+                      ✓
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-emerald-800">
+                      फोटो जोड़ी गई (Photo Attached)
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">पहचान के लिए सुरक्षित सहेजी गई</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>बदलें</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold flex items-center justify-center gap-1 border border-rose-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>हटाएं</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Action Buttons to Capture or Select */
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="py-3 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all"
+                >
+                  <Camera className="w-4 h-4 text-amber-700" />
+                  <span>कैमरा से फोटो खींचें (Take Photo)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition-all"
+                >
+                  <ImageIcon className="w-4 h-4 text-slate-600" />
+                  <span>गैलरी / फाइल से चुनें (Gallery)</span>
+                </button>
+              </div>
+            )}
+
+            {photoError && (
+              <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {photoError}
+              </p>
+            )}
           </div>
 
           {/* Field 8: Consent Checkbox */}
