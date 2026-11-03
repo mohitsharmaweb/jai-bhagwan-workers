@@ -27,6 +27,37 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // ==============================================================================
 
 /**
+ * Unpacks worker object: extracts photo and reference if they were safely packed into address.
+ */
+export const unpackWorker = (w) => {
+  if (!w) return w;
+  let photo = w.photo || '';
+  let reference = w.reference || '';
+  let address = w.address || '';
+
+  if (address && address.includes('[__META__:')) {
+    try {
+      const match = address.match(/\[__META__:([\s\S]*?)\]$/);
+      if (match && match[1]) {
+        const meta = JSON.parse(match[1]);
+        if (!photo && meta.photo) photo = meta.photo;
+        if (!reference && meta.reference) reference = meta.reference;
+        address = address.replace(/\[__META__:[\s\S]*?\]$/, '').trim();
+      }
+    } catch (e) {
+      console.warn('Could not parse packed worker address meta:', e);
+    }
+  }
+
+  return {
+    ...w,
+    photo,
+    reference,
+    address
+  };
+};
+
+/**
  * Register a new worker (Public endpoint)
  * Note: Public/anon users only have INSERT permission (no SELECT),
  * so we must NOT chain .select() here.
@@ -35,7 +66,11 @@ export const registerWorker = async (workerData) => {
   const normMobile = normalizePhoneNumber(workerData.mobile);
   const normWhatsapp = normalizePhoneNumber(workerData.whatsapp || workerData.mobile);
 
-  const payload = {
+  const rawAddress = workerData.address ? workerData.address.trim() : '';
+  const photo = workerData.photo || null;
+  const reference = workerData.reference ? workerData.reference.trim() : null;
+
+  const basePayload = {
     name: workerData.name.trim(),
     mobile: normMobile,
     whatsapp: normWhatsapp,
@@ -44,24 +79,40 @@ export const registerWorker = async (workerData) => {
     experience: parseInt(workerData.experience, 10) || 0,
     area: workerData.area,
     area_other: workerData.area_other || null,
-    address: workerData.address ? workerData.address.trim() : null,
-    reference: workerData.reference ? workerData.reference.trim() : null,
-    photo: workerData.photo || null,
     consent: Boolean(workerData.consent),
     status: 'active',
     created_at: new Date().toISOString()
   };
 
+  // Attempt 1: Try with dedicated columns
+  const fullPayload = {
+    ...basePayload,
+    address: rawAddress || null,
+    reference: reference,
+    photo: photo
+  };
+
   let { error } = await supabase
     .from('workers')
-    .insert([payload]);
+    .insert([fullPayload]);
 
-  // Self-healing fallback: if 'photo' or 'reference' columns do not exist yet in Supabase schema cache
-  if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('schema cache')))) {
-    console.warn('Supabase missing optional columns, falling back to core schema:', error.message);
-    const fallbackPayload = { ...payload };
-    delete fallbackPayload.photo;
-    delete fallbackPayload.reference;
+  // Self-healing fallback: if 'photo' or 'reference' columns do not exist yet in Supabase schema (PGRST204 / 42703)
+  if (error && (error.code === 'PGRST204' || error.code === '42703' || (error.message && error.message.includes('schema cache')))) {
+    console.warn('Supabase missing dedicated columns, packing photo/reference safely into address:', error.message);
+
+    // Pack photo & reference into address so photo is NEVER LOST!
+    let packedAddress = rawAddress;
+    if (photo || reference) {
+      const meta = {};
+      if (photo) meta.photo = photo;
+      if (reference) meta.reference = reference;
+      packedAddress = `${rawAddress}\n[__META__:${JSON.stringify(meta)}]`.trim();
+    }
+
+    const fallbackPayload = {
+      ...basePayload,
+      address: packedAddress || null
+    };
 
     const retryRes = await supabase
       .from('workers')
@@ -76,7 +127,12 @@ export const registerWorker = async (workerData) => {
     throw err;
   }
 
-  return payload;
+  return {
+    ...fullPayload,
+    photo,
+    reference,
+    address: rawAddress
+  };
 };
 
 /**
@@ -92,7 +148,7 @@ export const fetchAllWorkers = async () => {
     console.error('Error fetching workers from Supabase:', error);
     throw error;
   }
-  return data || [];
+  return (data || []).map(unpackWorker);
 };
 
 /**
@@ -111,7 +167,7 @@ export const fetchConsentedWorkers = async () => {
     console.error('Error fetching consented workers from Supabase:', error);
     throw error;
   }
-  return data || [];
+  return (data || []).map(unpackWorker);
 };
 
 /**
@@ -126,6 +182,10 @@ export const updateWorker = async (id, updates) => {
     payload.whatsapp = normalizePhoneNumber(payload.whatsapp);
   }
 
+  const rawAddress = payload.address ? payload.address.trim() : '';
+  const photo = payload.photo || null;
+  const reference = payload.reference ? payload.reference.trim() : null;
+
   let { data, error } = await supabase
     .from('workers')
     .update(payload)
@@ -134,11 +194,18 @@ export const updateWorker = async (id, updates) => {
     .single();
 
   // Self-healing fallback: if 'photo' or 'reference' columns do not exist yet in Supabase schema cache
-  if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('schema cache')))) {
-    console.warn('Supabase missing optional columns on update, falling back to core schema:', error.message);
+  if (error && (error.code === 'PGRST204' || error.code === '42703' || (error.message && error.message.includes('schema cache')))) {
+    console.warn('Supabase missing optional columns on update, packing into address:', error.message);
     const fallbackPayload = { ...payload };
     delete fallbackPayload.photo;
     delete fallbackPayload.reference;
+
+    if (photo || reference) {
+      const meta = {};
+      if (photo) meta.photo = photo;
+      if (reference) meta.reference = reference;
+      fallbackPayload.address = `${rawAddress}\n[__META__:${JSON.stringify(meta)}]`.trim();
+    }
 
     const retryRes = await supabase
       .from('workers')
@@ -157,7 +224,7 @@ export const updateWorker = async (id, updates) => {
     err.code = error.code;
     throw err;
   }
-  return data;
+  return unpackWorker(data);
 };
 
 /**

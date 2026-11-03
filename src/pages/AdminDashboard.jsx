@@ -311,6 +311,61 @@ export default function AdminDashboard() {
 
       </div>
 
+      {/* Recent Workers with Photo Preview on Dashboard */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-base font-black text-slate-900">
+              हाल ही में पंजीकृत साथी (Recent Registrations)
+            </h3>
+            <p className="text-xs text-slate-500">फोटो व मुख्य पहचान सहित</p>
+          </div>
+          <Link
+            to="/admin/workers"
+            className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+          >
+            <span>पूरी सूची देखें ({workers.length})</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {workers.length === 0 ? (
+          <p className="text-xs text-slate-400 py-6 text-center">अभी कोई कारीगर पंजीकृत नहीं है।</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {workers.slice(0, 6).map(w => (
+              <div
+                key={w.id}
+                className="p-3 rounded-2xl bg-slate-50 hover:bg-amber-50/50 border border-slate-200/80 transition-colors flex items-center gap-3"
+              >
+                {w.photo ? (
+                  <img
+                    src={w.photo}
+                    alt={w.name}
+                    className="w-11 h-11 rounded-xl object-cover border-2 border-amber-300 shadow-sm flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-900 font-black text-sm flex items-center justify-center border border-amber-200 flex-shrink-0">
+                    {(w.name || 'W').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-extrabold text-slate-900 truncate">{w.name}</h4>
+                  <p className="text-xs text-amber-700 font-bold truncate">
+                    {w.profession === 'Other' && w.profession_other 
+                      ? w.profession_other 
+                      : getProfessionLabel(w.profession, 'hi').split('/')[0]}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    📍 {w.area === 'Other' && w.area_other ? w.area_other : getAreaLabel(w.area, 'hi')} • +91 {w.mobile}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
